@@ -527,16 +527,25 @@
                 // 포스터 이미지 가져오기
                 const posterResponse = await fetch(`/api/movie-poster?name=${encodeURIComponent(movieName)}`);
                 const posterData = await posterResponse.json();
-                const posterUrl = posterData.items && posterData.items.length > 0 ? posterData.items[0].image : null;
+                
+                let posterUrl = null;
+                if (posterData.items && posterData.items.length > 0) {
+                    posterUrl = posterData.items[0].image;
+                    console.log('포스터 URL:', posterUrl); // 디버깅용
+                }
 
                 let detailHtml = `
                     <div class="detail-view">
+                        <button class="detail-button" onclick="loadTop10()" style="margin-bottom: 20px;">
+                            ← 목록으로 돌아가기
+                        </button>
+                        
                         <div class="detail-header">
                             <div class="poster-container">
                 `;
 
                 if (posterUrl) {
-                    detailHtml += `<img src="${posterUrl}" alt="${boxoffice.movieNm} 포스터">`;
+                    detailHtml += `<img src="${posterUrl}" alt="${boxoffice.movieNm} 포스터" onerror="this.parentElement.innerHTML='<div class=\\'poster-placeholder\\'>🎬</div>'">`;
                 } else {
                     detailHtml += `<div class="poster-placeholder">🎬</div>`;
                 }
@@ -599,10 +608,7 @@
                     `;
                 }
 
-                detailHtml += `
-                        <button class="detail-button" onclick="loadTop10()" style="margin-top: 20px;">목록으로 돌아가기</button>
-                    </div>
-                `;
+                detailHtml += `</div>`;
 
                 listDiv.innerHTML = detailHtml;
             } catch (error) {
@@ -611,7 +617,7 @@
             }
         }
 
-        // 흥행 성적 검색
+        // 흥행 성적 검색 - 모든 영화 검색 가능
         async function searchPerformance() {
             const movieName = document.getElementById('performanceSearch').value.trim();
             const resultDiv = document.getElementById('performanceResult');
@@ -624,43 +630,45 @@
             resultDiv.innerHTML = '<div class="loading">검색 중...</div>';
 
             try {
-                // 현재 날짜의 박스오피스에서 검색
-                const boxofficeResponse = await fetch(`/api/boxoffice?date=${selectedDate}`);
-                const boxofficeData = await boxofficeResponse.json();
-                
-                const movies = boxofficeData.boxOfficeResult?.dailyBoxOfficeList || [];
-                const foundMovie = movies.find(m => m.movieNm.includes(movieName) || movieName.includes(m.movieNm));
+                // 최근 박스오피스에서 검색
+                const response = await fetch(`/api/search-boxoffice-all?name=${encodeURIComponent(movieName)}`);
+                const data = await response.json();
 
-                if (foundMovie) {
+                if (data.found && data.boxoffice) {
+                    const movie = data.boxoffice;
                     resultDiv.innerHTML = `
                         <div class="detail-view">
-                            <h3>${foundMovie.movieNm}</h3>
+                            <h3>${movie.movieNm}</h3>
+                            <p style="color: #666; margin-bottom: 20px;">기준일: ${movie.searchDate}</p>
                             <div class="detail-grid">
                                 <div class="detail-label">박스오피스 순위</div>
-                                <div class="detail-value">${foundMovie.rank}위</div>
+                                <div class="detail-value">${movie.rank}위</div>
                                 
                                 <div class="detail-label">일일 관객수</div>
-                                <div class="detail-value">${parseInt(foundMovie.audiCnt).toLocaleString()}명</div>
+                                <div class="detail-value">${parseInt(movie.audiCnt).toLocaleString()}명</div>
                                 
                                 <div class="detail-label">누적 관객수</div>
-                                <div class="detail-value">${parseInt(foundMovie.audiAcc).toLocaleString()}명</div>
+                                <div class="detail-value">${parseInt(movie.audiAcc).toLocaleString()}명</div>
                                 
                                 <div class="detail-label">일일 매출액</div>
-                                <div class="detail-value">${parseInt(foundMovie.salesAmt).toLocaleString()}원</div>
+                                <div class="detail-value">${parseInt(movie.salesAmt).toLocaleString()}원</div>
                                 
                                 <div class="detail-label">누적 매출액</div>
-                                <div class="detail-value">${parseInt(foundMovie.salesAcc).toLocaleString()}원</div>
+                                <div class="detail-value">${parseInt(movie.salesAcc).toLocaleString()}원</div>
                                 
                                 <div class="detail-label">상영 횟수</div>
-                                <div class="detail-value">${parseInt(foundMovie.showCnt).toLocaleString()}회</div>
+                                <div class="detail-value">${parseInt(movie.showCnt).toLocaleString()}회</div>
                                 
                                 <div class="detail-label">예매율</div>
-                                <div class="detail-value">${foundMovie.salesShare}%</div>
+                                <div class="detail-value">${movie.salesShare}%</div>
+                                
+                                <div class="detail-label">개봉일</div>
+                                <div class="detail-value">${movie.openDt}</div>
                             </div>
                         </div>
                     `;
                 } else {
-                    resultDiv.innerHTML = '<div class="error-message">해당 영화의 흥행 성적을 찾을 수 없습니다. TOP 10에서 날짜를 변경하거나 정확한 영화 제목을 입력해주세요.</div>';
+                    resultDiv.innerHTML = `<div class="error-message">${data.error || '검색 결과가 없습니다.'}</div>`;
                 }
             } catch (error) {
                 resultDiv.innerHTML = `<div class="error-message">검색 중 오류가 발생했습니다: ${error.message}</div>`;
