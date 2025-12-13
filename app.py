@@ -6,9 +6,7 @@ import urllib.parse
 app = Flask(__name__)
 
 # API 키 설정 (실제 키로 교체해주세요)
-KOBIS_API_KEY = '0dfd8752d1b4b76ed1d45011c6607d56'  # 영화진흥위원회 API 키
-NAVER_CLIENT_ID = 'm6nZpyW187lm1c7iMKSH'  # 네이버 API 클라이언트 ID
-NAVER_CLIENT_SECRET = '6yXrem4rjM'  # 네이버 API 시크릿
+
 
 
 @app.route('/')
