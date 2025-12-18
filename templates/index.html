@@ -516,7 +516,7 @@
             let html = '';
             movies.forEach(movie => {
                 let rankBadge = '';
-                const rankChange = movie.rankChange;
+                const rankChange = parseInt(movie.rankChange) || 0;
                 const rankStatus = movie.rankStatus;
                 
                 if (rankStatus === 'new') {
@@ -537,11 +537,6 @@
                         </div>
                         <div class="movie-info">
                             <div class="movie-title">${movie.movieNm}</div>
-                            <div class="movie-details">
-                                <span>📅 개봉일: ${movie.openDt}</span>
-                                <span>👥 관객수: ${Number(movie.audiCnt).toLocaleString()}명</span>
-                                <span>📊 누적: ${Number(movie.audiAcc).toLocaleString()}명</span>
-                            </div>
                         </div>
                         <button class="btn-detail" onclick="showMovieDetail('${movie.movieCd}', '${movie.movieNm}')">
                             상세보기

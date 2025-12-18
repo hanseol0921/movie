@@ -6,9 +6,9 @@ import random
 app = Flask(__name__)
 
 # API 키 설정
-KOBIS_API_KEY = '여기에_KOBIS_API_키_입력'
-NAVER_CLIENT_ID = '여기에_네이버_클라이언트_ID_입력'
-NAVER_CLIENT_SECRET = '여기에_네이버_클라이언트_시크릿_입력'
+KOBIS_API_KEY = '0dfd8752d1b4b76ed1d45011c6607d56'  # 영화진흥위원회 API 키
+NAVER_CLIENT_ID = 'm6nZpyW187lm1c7iMKSH'  # 네이버 API 클라이언트 ID
+NAVER_CLIENT_SECRET = '6yXrem4rjM'  # 네이버 API 시크릿
 
 @app.route('/')
 def index():
