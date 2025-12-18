@@ -6,9 +6,9 @@ import random
 app = Flask(__name__)
 
 # API 키 설정
-KOBIS_API_KEY = '0dfd8752d1b4b76ed1d45011c6607d56'  # 영화진흥위원회 API 키
-NAVER_CLIENT_ID = 'm6nZpyW187lm1c7iMKSH'  # 네이버 API 클라이언트 ID
-NAVER_CLIENT_SECRET = '6yXrem4rjM'  # 네이버 API 시크릿
+KOBIS_API_KEY = '-'  # 영화진흥위원회 API 키
+NAVER_CLIENT_ID = '-'  # 네이버 API 클라이언트 ID
+NAVER_CLIENT_SECRET = '-'  # 네이버 API 시크릿
 
 @app.route('/')
 def index():
@@ -32,23 +32,33 @@ def daily_boxoffice():
     }
     
     try:
+        print(f"일간 박스오피스 요청: {target_date}")  # 디버깅용
         response = requests.get(url, params=params)
+        print(f"응답 상태: {response.status_code}")  # 디버깅용
         data = response.json()
+        print(f"응답 데이터: {data}")  # 디버깅용
         
         if 'boxOfficeResult' in data:
             movies = data['boxOfficeResult']['dailyBoxOfficeList']
             # 각 영화에 순위 변동 정보 추가
             for movie in movies:
-                rank_change = int(movie.get('rankOldAndNew', '0'))
-                rank_inten = int(movie.get('rankInten', 0))
+                rank_old_new = movie.get('rankOldAndNew', 'OLD')
+                rank_inten = movie.get('rankInten', '0')
                 
-                movie['rankStatus'] = 'new' if rank_change == 1 else 'old'
+                # 문자열을 정수로 변환
+                try:
+                    rank_inten = int(rank_inten)
+                except:
+                    rank_inten = 0
+                
+                movie['rankStatus'] = 'new' if rank_old_new == 'NEW' else 'old'
                 movie['rankChange'] = rank_inten
                 
             return jsonify({'success': True, 'movies': movies})
         else:
-            return jsonify({'success': False, 'message': '데이터를 찾을 수 없습니다.'})
+            return jsonify({'success': False, 'message': '데이터를 찾을 수 없습니다.', 'detail': data})
     except Exception as e:
+        print(f"에러 발생: {str(e)}")  # 디버깅용
         return jsonify({'success': False, 'message': str(e)})
 
 @app.route('/api/weekly-boxoffice')

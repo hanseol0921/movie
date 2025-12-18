@@ -164,11 +164,12 @@
 
         .rank-badge {
             display: inline-block;
-            margin-top: 5px;
-            padding: 4px 8px;
+            margin-left: 10px;
+            padding: 4px 10px;
             border-radius: 12px;
-            font-size: 0.75em;
+            font-size: 0.7em;
             font-weight: bold;
+            vertical-align: middle;
         }
 
         .rank-badge.new {
@@ -280,6 +281,11 @@
             margin-bottom: 20px;
         }
 
+        /* 랜덤 추천 카드의 정보 텍스트를 하얀색으로 변경 */
+        .random-movie-card .movie-details {
+            color: white;
+        }
+
         .hidden {
             display: none;
         }
@@ -381,7 +387,6 @@
         </div>
 
         <div class="content">
-            <!-- 일간 박스오피스 -->
             <div id="daily-content" class="menu-content">
                 <div class="date-selector">
                     <label>📅 날짜 선택:</label>
@@ -391,7 +396,6 @@
                 <div id="daily-movies" class="movie-list"></div>
             </div>
 
-            <!-- 주간 박스오피스 -->
             <div id="weekly-content" class="menu-content hidden">
                 <div class="date-selector">
                     <label>📅 기간 선택:</label>
@@ -406,13 +410,11 @@
                 <div id="weekly-movies" class="movie-list"></div>
             </div>
 
-            <!-- 랜덤 추천 -->
             <div id="random-content" class="menu-content hidden">
                 <button class="btn" onclick="loadRandomMovie()" style="margin-bottom: 20px;">🎲 랜덤 영화 추천받기</button>
                 <div id="random-movie"></div>
             </div>
 
-            <!-- 블로그 후기 -->
             <div id="blog-content" class="menu-content hidden">
                 <div class="search-box">
                     <input type="text" class="search-input" id="blog-keyword" placeholder="영화 제목을 입력하세요...">
@@ -423,7 +425,6 @@
         </div>
     </div>
 
-    <!-- 영화 상세 정보 모달 -->
     <div id="movie-modal" class="modal">
         <div class="modal-content">
             <span class="modal-close" onclick="closeModal()">&times;</span>
@@ -533,10 +534,12 @@
                     <div class="movie-item">
                         <div class="rank-container">
                             <div class="rank">${movie.rank}</div>
-                            ${rankBadge}
                         </div>
                         <div class="movie-info">
-                            <div class="movie-title">${movie.movieNm}</div>
+                            <div class="movie-title">
+                                ${movie.movieNm}
+                                ${rankBadge}
+                            </div>
                         </div>
                         <button class="btn-detail" onclick="showMovieDetail('${movie.movieCd}', '${movie.movieNm}')">
                             상세보기
@@ -563,11 +566,6 @@
                         </div>
                         <div class="movie-info">
                             <div class="movie-title">${movie.movieNm}</div>
-                            <div class="movie-details">
-                                <span>📅 개봉일: ${movie.openDt}</span>
-                                <span>👥 주간관객: ${Number(movie.audiCnt).toLocaleString()}명</span>
-                                <span>📊 누적: ${Number(movie.audiAcc).toLocaleString()}명</span>
-                            </div>
                         </div>
                         <button class="btn-detail" onclick="showMovieDetail('${movie.movieCd}', '${movie.movieNm}')">
                             상세보기
