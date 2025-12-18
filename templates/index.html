@@ -90,7 +90,7 @@
             color: #495057;
         }
 
-        .date-selector input {
+        .date-selector input, .date-selector select {
             padding: 10px;
             border: 2px solid #e9ecef;
             border-radius: 8px;
@@ -115,6 +115,22 @@
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         }
 
+        .btn-detail {
+            padding: 8px 16px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-detail:hover {
+            background: #218838;
+        }
+
         .movie-list {
             display: grid;
             gap: 15px;
@@ -135,11 +151,44 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
+        .rank-container {
+            min-width: 80px;
+            text-align: center;
+        }
+
         .rank {
             font-size: 2em;
             font-weight: bold;
             color: #667eea;
-            min-width: 50px;
+        }
+
+        .rank-badge {
+            display: inline-block;
+            margin-top: 5px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: bold;
+        }
+
+        .rank-badge.new {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .rank-badge.up {
+            background: #51cf66;
+            color: white;
+        }
+
+        .rank-badge.down {
+            background: #74c0fc;
+            color: white;
+        }
+
+        .rank-badge.same {
+            background: #e9ecef;
+            color: #6c757d;
         }
 
         .movie-info {
@@ -234,6 +283,87 @@
         .hidden {
             display: none;
         }
+
+        /* 모달 스타일 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s;
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-close {
+            float: right;
+            font-size: 2em;
+            cursor: pointer;
+            color: #6c757d;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: #667eea;
+        }
+
+        .modal-title {
+            font-size: 2em;
+            font-weight: bold;
+            color: #212529;
+            margin: 20px 0;
+            clear: both;
+        }
+
+        .modal-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .modal-section h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .modal-info {
+            line-height: 1.8;
+            color: #495057;
+        }
+
+        .modal-info strong {
+            color: #212529;
+        }
     </style>
 </head>
 <body>
@@ -264,8 +394,13 @@
             <!-- 주간 박스오피스 -->
             <div id="weekly-content" class="menu-content hidden">
                 <div class="date-selector">
-                    <label>📅 날짜 선택:</label>
-                    <input type="date" id="weekly-date" value="">
+                    <label>📅 기간 선택:</label>
+                    <select id="weekly-period">
+                        <option value="1">최근 1주</option>
+                        <option value="2">최근 2주</option>
+                        <option value="3">최근 3주</option>
+                        <option value="4">최근 4주</option>
+                    </select>
                     <button class="btn" onclick="loadWeeklyBoxOffice()">조회</button>
                 </div>
                 <div id="weekly-movies" class="movie-list"></div>
@@ -288,6 +423,14 @@
         </div>
     </div>
 
+    <!-- 영화 상세 정보 모달 -->
+    <div id="movie-modal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
     <script>
         // 초기 날짜 설정
         function setDefaultDates() {
@@ -296,7 +439,6 @@
             yesterday.setDate(yesterday.getDate() - 1);
             
             document.getElementById('daily-date').value = formatDate(yesterday);
-            document.getElementById('weekly-date').value = formatDate(yesterday);
         }
 
         function formatDate(date) {
@@ -317,7 +459,6 @@
             event.target.classList.add('active');
             document.getElementById(`${menu}-content`).classList.remove('hidden');
             
-            // 메뉴별 초기 로드
             if (menu === 'daily' && document.getElementById('daily-movies').innerHTML === '') {
                 loadDailyBoxOffice();
             } else if (menu === 'weekly' && document.getElementById('weekly-movies').innerHTML === '') {
@@ -336,7 +477,7 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    displayMovies(data.movies, container);
+                    displayMoviesWithRank(data.movies, container);
                 } else {
                     container.innerHTML = '<div class="loading">데이터를 불러올 수 없습니다.</div>';
                 }
@@ -347,12 +488,12 @@
 
         // 주간 박스오피스 로드
         async function loadWeeklyBoxOffice() {
-            const date = document.getElementById('weekly-date').value;
+            const weeks = document.getElementById('weekly-period').value;
             const container = document.getElementById('weekly-movies');
             container.innerHTML = '<div class="loading">로딩 중...</div>';
             
             try {
-                const response = await fetch(`/api/weekly-boxoffice?date=${date}`);
+                const response = await fetch(`/api/weekly-boxoffice?weeks=${weeks}`);
                 const data = await response.json();
                 
                 if (data.success) {
@@ -365,7 +506,53 @@
             }
         }
 
-        // 영화 목록 표시
+        // 순위 변동 정보 포함 영화 목록 표시
+        function displayMoviesWithRank(movies, container) {
+            if (!movies || movies.length === 0) {
+                container.innerHTML = '<div class="loading">영화 정보가 없습니다.</div>';
+                return;
+            }
+            
+            let html = '';
+            movies.forEach(movie => {
+                let rankBadge = '';
+                const rankChange = movie.rankChange;
+                const rankStatus = movie.rankStatus;
+                
+                if (rankStatus === 'new') {
+                    rankBadge = '<span class="rank-badge new">NEW</span>';
+                } else if (rankChange > 0) {
+                    rankBadge = `<span class="rank-badge up">▲ ${rankChange}</span>`;
+                } else if (rankChange < 0) {
+                    rankBadge = `<span class="rank-badge down">▼ ${Math.abs(rankChange)}</span>`;
+                } else {
+                    rankBadge = '<span class="rank-badge same">-</span>';
+                }
+                
+                html += `
+                    <div class="movie-item">
+                        <div class="rank-container">
+                            <div class="rank">${movie.rank}</div>
+                            ${rankBadge}
+                        </div>
+                        <div class="movie-info">
+                            <div class="movie-title">${movie.movieNm}</div>
+                            <div class="movie-details">
+                                <span>📅 개봉일: ${movie.openDt}</span>
+                                <span>👥 관객수: ${Number(movie.audiCnt).toLocaleString()}명</span>
+                                <span>📊 누적: ${Number(movie.audiAcc).toLocaleString()}명</span>
+                            </div>
+                        </div>
+                        <button class="btn-detail" onclick="showMovieDetail('${movie.movieCd}', '${movie.movieNm}')">
+                            상세보기
+                        </button>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        // 일반 영화 목록 표시 (주간용)
         function displayMovies(movies, container) {
             if (!movies || movies.length === 0) {
                 container.innerHTML = '<div class="loading">영화 정보가 없습니다.</div>';
@@ -376,19 +563,108 @@
             movies.forEach(movie => {
                 html += `
                     <div class="movie-item">
-                        <div class="rank">${movie.rank}</div>
+                        <div class="rank-container">
+                            <div class="rank">${movie.rank}</div>
+                        </div>
                         <div class="movie-info">
                             <div class="movie-title">${movie.movieNm}</div>
                             <div class="movie-details">
                                 <span>📅 개봉일: ${movie.openDt}</span>
-                                <span>👥 관객수: ${Number(movie.audiCnt).toLocaleString()}명</span>
-                                <span>📊 누적관객: ${Number(movie.audiAcc).toLocaleString()}명</span>
+                                <span>👥 주간관객: ${Number(movie.audiCnt).toLocaleString()}명</span>
+                                <span>📊 누적: ${Number(movie.audiAcc).toLocaleString()}명</span>
                             </div>
                         </div>
+                        <button class="btn-detail" onclick="showMovieDetail('${movie.movieCd}', '${movie.movieNm}')">
+                            상세보기
+                        </button>
                     </div>
                 `;
             });
             container.innerHTML = html;
+        }
+
+        // 영화 상세 정보 표시
+        async function showMovieDetail(movieCd, movieNm) {
+            const modal = document.getElementById('movie-modal');
+            const modalBody = document.getElementById('modal-body');
+            
+            modalBody.innerHTML = '<div class="loading">로딩 중...</div>';
+            modal.classList.add('show');
+            
+            try {
+                const response = await fetch(`/api/movie-detail/${movieCd}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const movie = data.movie;
+                    
+                    // 감독 정보
+                    const directors = movie.directors.map(d => d.peopleNm).join(', ') || '정보 없음';
+                    
+                    // 배우 정보
+                    const actors = movie.actors.slice(0, 5).map(a => a.peopleNm).join(', ') || '정보 없음';
+                    
+                    // 장르 정보
+                    const genres = movie.genres.map(g => g.genreNm).join(', ') || '정보 없음';
+                    
+                    // 제작국가
+                    const nations = movie.nations.map(n => n.nationNm).join(', ') || '정보 없음';
+                    
+                    // 상영시간
+                    const showTm = movie.showTm ? `${movie.showTm}분` : '정보 없음';
+                    
+                    // 관람등급
+                    const watchGrade = movie.audits.length > 0 ? movie.audits[0].watchGradeNm : '정보 없음';
+                    
+                    modalBody.innerHTML = `
+                        <h2 class="modal-title">${movie.movieNm}${movie.movieNmEn ? ' (' + movie.movieNmEn + ')' : ''}</h2>
+                        
+                        <div class="modal-section">
+                            <h3>📋 기본 정보</h3>
+                            <div class="modal-info">
+                                <p><strong>제작년도:</strong> ${movie.prdtYear || '정보 없음'}</p>
+                                <p><strong>개봉일:</strong> ${movie.openDt || '정보 없음'}</p>
+                                <p><strong>상영시간:</strong> ${showTm}</p>
+                                <p><strong>관람등급:</strong> ${watchGrade}</p>
+                                <p><strong>장르:</strong> ${genres}</p>
+                                <p><strong>제작국가:</strong> ${nations}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="modal-section">
+                            <h3>🎬 제작진</h3>
+                            <div class="modal-info">
+                                <p><strong>감독:</strong> ${directors}</p>
+                                <p><strong>배우:</strong> ${actors}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="modal-section">
+                            <h3>🎞️ 제작사</h3>
+                            <div class="modal-info">
+                                <p>${movie.companys.map(c => `${c.companyNm} (${c.companyPartNm})`).join('<br>') || '정보 없음'}</p>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    modalBody.innerHTML = '<div class="loading">영화 정보를 불러올 수 없습니다.</div>';
+                }
+            } catch (error) {
+                modalBody.innerHTML = '<div class="loading">오류가 발생했습니다.</div>';
+            }
+        }
+
+        // 모달 닫기
+        function closeModal() {
+            document.getElementById('movie-modal').classList.remove('show');
+        }
+
+        // 모달 외부 클릭시 닫기
+        window.onclick = function(event) {
+            const modal = document.getElementById('movie-modal');
+            if (event.target === modal) {
+                closeModal();
+            }
         }
 
         // 랜덤 영화 추천
@@ -411,6 +687,9 @@
                                 <p>📅 개봉일: ${movie.openDt}</p>
                                 <p>👥 오늘 관객수: ${Number(movie.audiCnt).toLocaleString()}명</p>
                             </div>
+                            <button class="btn" onclick="showMovieDetail('${movie.movieCd}', '${movie.movieNm}')" style="margin-top: 20px;">
+                                상세보기
+                            </button>
                         </div>
                     `;
                 } else {
@@ -456,6 +735,15 @@
                 container.innerHTML = '<div class="loading">오류가 발생했습니다.</div>';
             }
         }
+
+        // 엔터키로 블로그 검색
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('blog-keyword').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchBlog();
+                }
+            });
+        });
 
         // 페이지 로드 시 초기화
         setDefaultDates();

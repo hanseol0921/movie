@@ -6,9 +6,9 @@ import random
 app = Flask(__name__)
 
 # API 키 설정
-KOBIS_API_KEY = '0dfd8752d1b4b76ed1d45011c6607d56'  # 영화진흥위원회 API 키
-NAVER_CLIENT_ID = 'm6nZpyW187lm1c7iMKSH'  # 네이버 API 클라이언트 ID
-NAVER_CLIENT_SECRET = '6yXrem4rjM'  # 네이버 API 시크릿
+KOBIS_API_KEY = '여기에_KOBIS_API_키_입력'
+NAVER_CLIENT_ID = '여기에_네이버_클라이언트_ID_입력'
+NAVER_CLIENT_SECRET = '여기에_네이버_클라이언트_시크릿_입력'
 
 @app.route('/')
 def index():
@@ -16,15 +16,13 @@ def index():
 
 @app.route('/api/daily-boxoffice')
 def daily_boxoffice():
-    """일간 박스오피스 TOP 10"""
+    """일간 박스오피스 TOP 10 (순위 변동 포함)"""
     target_date = request.args.get('date')
     
     if not target_date:
-        # 기본값: 어제 날짜
         yesterday = datetime.now() - timedelta(days=1)
         target_date = yesterday.strftime('%Y%m%d')
     else:
-        # YYYY-MM-DD -> YYYYMMDD 형식 변환
         target_date = target_date.replace('-', '')
     
     url = f'http://www.kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchDailyBoxOfficeList.json'
@@ -39,6 +37,14 @@ def daily_boxoffice():
         
         if 'boxOfficeResult' in data:
             movies = data['boxOfficeResult']['dailyBoxOfficeList']
+            # 각 영화에 순위 변동 정보 추가
+            for movie in movies:
+                rank_change = int(movie.get('rankOldAndNew', '0'))
+                rank_inten = int(movie.get('rankInten', 0))
+                
+                movie['rankStatus'] = 'new' if rank_change == 1 else 'old'
+                movie['rankChange'] = rank_inten
+                
             return jsonify({'success': True, 'movies': movies})
         else:
             return jsonify({'success': False, 'message': '데이터를 찾을 수 없습니다.'})
@@ -48,22 +54,19 @@ def daily_boxoffice():
 @app.route('/api/weekly-boxoffice')
 def weekly_boxoffice():
     """주간 박스오피스 TOP 10"""
-    target_date = request.args.get('date')
+    weeks_ago = request.args.get('weeks', 1, type=int)
     
-    if not target_date:
-        # 기본값: 지난주 일요일
-        today = datetime.now()
-        days_since_sunday = (today.weekday() + 1) % 7
-        last_sunday = today - timedelta(days=days_since_sunday + 7)
-        target_date = last_sunday.strftime('%Y%m%d')
-    else:
-        target_date = target_date.replace('-', '')
+    # 지정된 주차 전의 일요일 날짜 계산
+    today = datetime.now()
+    days_since_sunday = (today.weekday() + 1) % 7
+    target_sunday = today - timedelta(days=days_since_sunday + (7 * weeks_ago))
+    target_date = target_sunday.strftime('%Y%m%d')
     
     url = f'http://www.kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchWeeklyBoxOfficeList.json'
     params = {
         'key': KOBIS_API_KEY,
         'targetDt': target_date,
-        'weekGb': '0'  # 0: 주간, 1: 주말, 2: 주중
+        'weekGb': '0'
     }
     
     try:
@@ -78,10 +81,30 @@ def weekly_boxoffice():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
+@app.route('/api/movie-detail/<movie_code>')
+def movie_detail(movie_code):
+    """영화 상세 정보 조회"""
+    url = f'http://www.kobis.or.kr/kobisopenapi/webservice/rest/movie/searchMovieInfo.json'
+    params = {
+        'key': KOBIS_API_KEY,
+        'movieCd': movie_code
+    }
+    
+    try:
+        response = requests.get(url, params=params)
+        data = response.json()
+        
+        if 'movieInfoResult' in data and 'movieInfo' in data['movieInfoResult']:
+            movie_info = data['movieInfoResult']['movieInfo']
+            return jsonify({'success': True, 'movie': movie_info})
+        else:
+            return jsonify({'success': False, 'message': '영화 정보를 찾을 수 없습니다.'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
 @app.route('/api/random-movie')
 def random_movie():
     """랜덤 영화 추천"""
-    # 최근 박스오피스 데이터에서 랜덤 선택
     yesterday = datetime.now() - timedelta(days=1)
     target_date = yesterday.strftime('%Y%m%d')
     
@@ -109,7 +132,7 @@ def random_movie():
 def search_blog():
     """네이버 블로그 후기 검색"""
     keyword = request.args.get('keyword', '')
-    display = request.args.get('display', 10)  # 검색 결과 개수
+    display = request.args.get('display', 10)
     
     if not keyword:
         return jsonify({'success': False, 'message': '검색어를 입력해주세요.'})
@@ -122,7 +145,7 @@ def search_blog():
     params = {
         'query': keyword + ' 영화 후기',
         'display': display,
-        'sort': 'sim'  # sim: 정확도순, date: 날짜순
+        'sort': 'sim'
     }
     
     try:
